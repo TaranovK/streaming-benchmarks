@@ -9,12 +9,15 @@ package spark.benchmark
 
 import java.util
 
-import kafka.serializer.StringDecoder
+//import kafka.serializer.StringDecoder
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark.streaming
 import org.apache.spark.streaming.{Milliseconds, StreamingContext}
 
-import org.apache.spark.streaming.kafka.KafkaUtils
-import org.apache.spark.streaming.dstream
+import org.apache.spark.streaming.kafka010._
+import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
+import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
+
 import org.apache.spark.SparkConf
 import org.json.JSONObject
 import org.sedis._
@@ -61,11 +64,27 @@ object KafkaRedisAdvertisingStream {
     // Create direct kafka stream with brokers and topics
     val topicsSet = Set(topic)
     val brokers = joinHosts(kafkaHosts, kafkaPort)
-    val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers, "auto.offset.reset" -> "smallest")
+//    val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers, "auto.offset.reset" -> "earliest")
+
+    val kafkaParams = Map[String, Object](
+      "bootstrap.servers" -> brokers,
+      "key.deserializer" -> classOf[StringDeserializer],
+      "value.deserializer" -> classOf[StringDeserializer],
+      "group.id" -> "spark1",
+      "auto.offset.reset" -> "earliest",
+      "enable.auto.commit" -> (false: java.lang.Boolean)
+    )
+
+
+
     System.err.println(
       "Trying to connect to Kafka at " + brokers)
-    val messages = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
-      ssc, kafkaParams, topicsSet)
+   // val messages = KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
+   //   ssc, kafkaParams, topicsSet)
+
+    val messages = KafkaUtils.createDirectStream[String, String](
+      ssc, PreferConsistent, Subscribe[String, String](topicsSet, kafkaParams)
+    )
 
     //We can repartition to use more executors if desired
     //    val messages_repartitioned = messages.repartition(10)
@@ -73,7 +92,7 @@ object KafkaRedisAdvertisingStream {
 
     //take the second tuple of the implicit Tuple2 argument _, by calling the Tuple2 method ._2
     //The first tuple is the key, which we don't use in this benchmark
-    val kafkaRawData = messages.map(_._2)
+    val kafkaRawData = messages.map(_.value)
 
     //Parse the String as JSON
     val kafkaData = kafkaRawData.map(parseJson(_))

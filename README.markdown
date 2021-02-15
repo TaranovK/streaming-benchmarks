@@ -15,11 +15,9 @@ We provide a script stream-bench.sh to setup and run the tests on a single node,
 It takes a list of operations to perform, and options are passed into the script through environment variables. The most significant of these are
 
 #### Operations
-   * SETUP - download dependencies (Storm, Spark, Flink, Redis, and Kafka) cleans out any temp files and compiles everything
-   * STORM_TEST - Run the test using Storm on a single node
+   * SETUP - download dependencies (Spark, Flink, Redis, and Kafka) cleans out any temp files and compiles everything
    * SPARK_TEST - Run the test using Spark on a single node
    * FLINK_TEST - Run the test using Flink on a single node
-   * APEX_TEST  - Run the test using Apex on a single node
    * STOP_ALL - If something goes wrong stop all processes that were launched for the test.
 
 #### Environment Variables
